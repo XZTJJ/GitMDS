@@ -25,7 +25,7 @@ public class SseServiceImpl {
     public SseEmitter subscribe(@PathVariable("channlName") String channlName) throws Exception {
         // 超时时间设置为1天
         ReSseEmitter sseEmitter = new ReSseEmitter(0L, channlName);
-        //一些回调设置, timeout 和 error 方法其实也是调用的
+        //一些回调设置, timeout 和 error 方法其实也是调用的completion的方法，SseEmitter内部也会维护一个类似sessionId的东西
         sseEmitter.onTimeout(timeOutCallBack(sseEmitter));
         sseEmitter.onError(errorCallBack(sseEmitter));
         sseEmitter.onCompletion(completionCallBack(sseEmitter));
