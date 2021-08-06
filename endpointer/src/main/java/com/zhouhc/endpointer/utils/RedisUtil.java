@@ -3,10 +3,17 @@ package com.zhouhc.endpointer.utils;
 import com.zhouhc.endpointer.error.CustomException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.connection.MessageListener;
+import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.core.*;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
+import org.springframework.data.redis.listener.Topic;
 
+import java.nio.charset.Charset;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import static com.zhouhc.endpointer.renum.ErrorEnum.redisCursorError;
@@ -15,6 +22,8 @@ import static com.zhouhc.endpointer.renum.ErrorEnum.redisCursorError;
 //Redis的管理类, 存储的都是String类型，如果是非String类,会用gson转成 json字符串的形式
 public class RedisUtil {
     private static final Logger LOGGER = LoggerFactory.getLogger(RedisUtil.class);
+    //订阅消息时用到
+    private final static Object lockObj = new Object();
 
     /****************************************************  key的操作开始  ******************************************************************/
     //删除某个Key
@@ -65,6 +74,17 @@ public class RedisUtil {
             return 0L;
         StringRedisTemplate stringRedisTemplate = getStringRedisTemplate();
         return stringRedisTemplate.countExistingKeys(keys);
+    }
+
+    //redis的Key扫描
+    public static <T> Set<T> scan(String pattern, int limit, Class<T> keyType) {
+        ScanOptions build = ScanOptions.scanOptions().match(pattern).count(limit).build();
+        RedisConnection connection = getStringRedisTemplate().getConnectionFactory().getConnection();
+        try (Cursor<byte[]> cursor = connection.scan(build)) {
+            return cursor.stream().map(byteArrays -> JSONUtil.toT(new String(byteArrays, Charset.forName("utf-8")), keyType)).collect(Collectors.toSet());
+        } catch (Exception e) {
+            throw new CustomException(redisCursorError, e);
+        }
     }
 
     /****************************************************  key的操作结束  ******************************************************************/
@@ -181,24 +201,14 @@ public class RedisUtil {
 
     //获取获取所有值
     public static Map<String, String> hGetAll(String key) {
-        return hGetAll(key,String.class,String.class);
+        return hGetAll(key, String.class, String.class);
     }
 
     //获取获取所有值
     public static <T, V> Map<T, V> hGetAll(String key, Class<T> hashKeyClassType, Class<V> valueClassType) {
         if (key == null)
-            return new HashMap<T, V>();
-        //获取数据
-        HashOperations<String, Object, Object> hashOperations = getStringRedisTemplate().opsForHash();
-        ScanOptions scanOptions = ScanOptions.scanOptions().match("*").count(1000).build();
-        //游标遍历
-        try (Cursor<Map.Entry<Object, Object>> cursor = hashOperations.scan(key, scanOptions)) {
-            Map<T, V> resultMap = cursor.stream().collect(Collectors.toMap(tempKey -> JSONUtil.toT(tempKey.getKey() + "", hashKeyClassType),
-                    tempKey -> JSONUtil.toT(tempKey.getValue() + "", valueClassType)));
-            return resultMap;
-        } catch (Exception e) {
-            throw new CustomException(redisCursorError, e);
-        }
+            return Collections.EMPTY_MAP;
+        return hScan(key, "*", 2000, hashKeyClassType, valueClassType);
     }
 
     //获取获取keys
@@ -221,10 +231,100 @@ public class RedisUtil {
         return hGetAll(key, String.class, valueTypeClass).values();
     }
 
+    //hash方式的游标遍历,
+    public static <T, V> Map<T, V> hScan(String key, String pattern, int limit, Class<T> hashKeyClassType, Class<V> valueClassType) {
+        HashOperations<String, Object, Object> hashOperations = getStringRedisTemplate().opsForHash();
+        ScanOptions scanOptions = ScanOptions.scanOptions().match(pattern).count(limit).build();
+        try (Cursor<Map.Entry<Object, Object>> cursor = hashOperations.scan(key, scanOptions);) {
+            Map<T, V> resultMap = cursor.stream().collect(Collectors.toMap(tempKey -> JSONUtil.toT(tempKey.getKey() + "", hashKeyClassType),
+                    tempKey -> JSONUtil.toT(tempKey.getValue() + "", valueClassType)));
+            return resultMap;
+        } catch (Exception e) {
+            throw new CustomException(redisCursorError, e);
+        }
+    }
+
     /****************************************************  hash类型的操作结束  ******************************************************************/
+
+
+    /****************************************************  zset类型的操作结束  ******************************************************************/
+    //zset的增加操作
+    public static boolean zadd(String key, Object value, double score) {
+        ZSetOperations<String, String> stringStringZSetOperations = getStringRedisTemplate().opsForZSet();
+        String valueStr = JSONUtil.toString(value);
+        if (key == null || valueStr == null)
+            return false;
+        return stringStringZSetOperations.add(key, valueStr, score);
+    }
+
+    //zset的删除操作
+    public static long zrem(String key, Object... value) {
+        ZSetOperations<String, String> stringStringZSetOperations = getStringRedisTemplate().opsForZSet();
+        if (key == null || value.length == 0)
+            return 0;
+        AtomicLong atomicLong = new AtomicLong(0);
+        Arrays.stream(value).map(val -> JSONUtil.toString(val)).forEach(valstr -> atomicLong.addAndGet(stringStringZSetOperations.remove(valstr)));
+        return atomicLong.get();
+    }
+
+    //zset的按照socre进行游标遍历
+    public static <T> Set<T> zRangeByScore(String key, double min, double max, long count, Class<T> valueClassType) {
+        if (key == null)
+            return Collections.EMPTY_SET;
+        //分段获取,
+        long zcount = zcount(key, min, max);
+        long increamt = 0;
+        ZSetOperations<String, String> stringStringZSetOperations = getStringRedisTemplate().opsForZSet();
+        Set<T> result = new HashSet<T>();
+        while (increamt < zcount) {
+            Set<T> collect = stringStringZSetOperations.rangeByScore(key, min, max, increamt, count).stream().map(valueStr -> JSONUtil.toT(valueStr, valueClassType)).collect(Collectors.toSet());
+            result.addAll(collect);
+            increamt += count;
+        }
+        return result;
+    }
+
+    //zset的按照socre进行游标遍历，简化版本
+    public static Set<String> zRangeByScore(String key, double min, double max) {
+        return zRangeByScore(key, min, max, 2000, String.class);
+    }
+
+    //zset的count操作
+    public static long zcount(String key, double min, double max) {
+        if (key == null)
+            return 0;
+        return getStringRedisTemplate().opsForZSet().count(key, min, max);
+    }
+
+    /****************************************************  zset类型的操作结束  ******************************************************************/
+
+
+    /****************************************************  pub/sub形式  ************************************************************************/
+    //RedisMessageListenerContainer 提示如果同事增加或者删除listner会出现问题，所以同步一下
+    public static void subscribe(MessageListener listener, Topic topic) {
+        RedisMessageListenerContainer redisMessageListenerContainer = getRedisMessageListenerContainer();
+        synchronized (lockObj) {
+            redisMessageListenerContainer.addMessageListener(listener, topic);
+        }
+    }
+
+    //RedisMessageListenerContainer 提示如果同事增加或者删除listner会出现问题，所以同步一下
+    public static void unSubscribe(MessageListener listener, Topic topic) {
+        RedisMessageListenerContainer redisMessageListenerContainer = getRedisMessageListenerContainer();
+        synchronized (lockObj) {
+            redisMessageListenerContainer.removeMessageListener(listener, topic);
+        }
+    }
+
+    /****************************************************  pub/sub形式  ************************************************************************/
 
     //获取Spring自带的管理类
     private static StringRedisTemplate getStringRedisTemplate() {
         return SpringContextUtil.getBean(StringRedisTemplate.class);
+    }
+
+    //获取Spring的监听容器
+    private static RedisMessageListenerContainer getRedisMessageListenerContainer() {
+        return SpringContextUtil.getBean(RedisMessageListenerContainer.class);
     }
 }

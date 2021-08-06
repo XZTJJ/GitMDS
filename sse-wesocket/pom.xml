@@ -138,13 +138,13 @@
             <version>2.10.0</version>
         </dependency>
         <!--apache的IO工具 -->
-        <!-- google的 guava线程 -->
+        <!-- google的 guava -->
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
             <version>30.1.1-jre</version>
         </dependency>
-
+        <!-- google的 guava -->
         <!--http客户端-->
         <dependency>
             <groupId>cn.hutool</groupId>

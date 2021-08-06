@@ -10,8 +10,6 @@
   <packaging>pom</packaging>
 
   <modules>
-    <module>spring-boot-security</module>
-    <module>picocli-comandline</module>
     <module>endpointer</module>
     <module>sse-wesocket</module>
   </modules>
