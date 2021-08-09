@@ -98,6 +98,8 @@ public class JSONUtil {
     }
 
     public static <T> T toT(String jsonStr, Class<T> targetClass) {
+        if(targetClass.equals(String.class))
+            return (T)jsonStr;
         return builder.create().fromJson(jsonStr, targetClass);
     }
 

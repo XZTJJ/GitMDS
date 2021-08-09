@@ -1,17 +1,17 @@
 package com.zhouhc.endpointer.controller;
 
 import com.zhouhc.endpointer.compent.RedisInsertTask;
+import com.zhouhc.endpointer.error.CustomException;
 import com.zhouhc.endpointer.redisSub.KeyExpiredLinster;
 import com.zhouhc.endpointer.redisSub.PushChannelLinster;
 import com.zhouhc.endpointer.thread.CThreadFactory;
-import com.zhouhc.endpointer.utils.GetCofUtil;
-import com.zhouhc.endpointer.utils.MsgUtils;
-import com.zhouhc.endpointer.utils.RedisUtil;
-import com.zhouhc.endpointer.utils.SpringContextUtil;
+import com.zhouhc.endpointer.utils.*;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.data.redis.listener.ChannelTopic;
@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.nio.charset.Charset;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Arrays;
@@ -31,6 +32,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+
+import static com.zhouhc.endpointer.renum.ErrorEnum.redisCursorError;
 
 
 //redis队列测试
@@ -75,11 +79,14 @@ public class RedisInsertTest {
     public String zsorce() {
         try {
             ZSetOperations<String, String> stringStringZSetOperations = SpringContextUtil.getBean(StringRedisTemplate.class).opsForZSet();
+            LocalDateTime localDateTime = LocalDateTime.now();
             for (int i = 0; i < 10; i++) {
-                LocalDateTime now = LocalDateTime.now().minusYears(i);
-                long epochMilli = now.toInstant(ZoneOffset.of("+8")).toEpochMilli();
-                stringStringZSetOperations.add("times", i + "-", (double) epochMilli);
-                stringStringZSetOperations.add("times", i + "", (double) epochMilli + 1);
+                LocalDateTime now = localDateTime.minusYears(i);
+//                long epochMilli = now.toInstant(ZoneOffset.of("+8")).toEpochMilli();
+                long epochMilli = now.toEpochSecond(ZoneOffset.of("+8"));
+                System.out.printf("现在存入的时间为: %s%n", epochMilli);
+                stringStringZSetOperations.add("flow:stream" + i, "stream" + i + ":yyyyMMddHHmmss:" + i, (double) epochMilli);
+                stringStringZSetOperations.add("flow:stream" + i, "stream" + i + ":yyyyMMddHHmmss:0" + i, (double) epochMilli + 1);
             }
         } catch (Exception e) {
             LOGGER.error("error", e);
@@ -108,14 +115,33 @@ public class RedisInsertTest {
             //key过期订阅
             KeyExpiredLinster keyExpiredLinster = new KeyExpiredLinster();
             Topic keyExTopic = new PatternTopic("__keyevent@0__:expired");
-            RedisUtil.subscribe(keyExpiredLinster,keyExTopic);
+            RedisUtil.subscribe(keyExpiredLinster, keyExTopic);
 
             PushChannelLinster pushChannelLinster = new PushChannelLinster();
             Topic channelTopic = new ChannelTopic("zhouhc");
-            RedisUtil.subscribe(pushChannelLinster,channelTopic);
+            RedisUtil.subscribe(pushChannelLinster, channelTopic);
 
         } catch (Exception e) {
             LOGGER.error("error", e);
+        }
+        return MsgUtils.successMsg();
+    }
+
+    @GetMapping("hset")
+    public String hset() {
+        Map<Integer, Integer> hashKey = RedisUtil.hScan("hashKey", "*", 100, Integer.class, Integer.class);
+        System.out.println();
+
+
+        ScanOptions build = ScanOptions.scanOptions().match("flow:*").count(1000).build();
+        RedisConnection connection = SpringContextUtil.getBean(StringRedisTemplate.class).getConnectionFactory().getConnection();
+        Cursor<byte[]> scan = connection.scan(build);
+
+        Set<String> collect = null;
+        try (Cursor<byte[]> cursor = connection.scan(build)) {
+            collect = cursor.stream().map(byteArrays -> JSONUtil.toT(new String(byteArrays, Charset.forName("utf-8")), String.class)).collect(Collectors.toSet());
+        } catch (Exception e) {
+            throw new CustomException(redisCursorError, e);
         }
         return MsgUtils.successMsg();
     }

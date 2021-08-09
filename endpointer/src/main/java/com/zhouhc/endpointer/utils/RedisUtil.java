@@ -81,9 +81,10 @@ public class RedisUtil {
         ScanOptions build = ScanOptions.scanOptions().match(pattern).count(limit).build();
         RedisConnection connection = getStringRedisTemplate().getConnectionFactory().getConnection();
         try (Cursor<byte[]> cursor = connection.scan(build)) {
-            return cursor.stream().map(byteArrays -> JSONUtil.toT(new String(byteArrays, Charset.forName("utf-8")), keyType)).collect(Collectors.toSet());
+            return cursor.stream().map(byteArrays -> new String(byteArrays, Charset.forName("utf-8"))).map(str -> JSONUtil.toT(str, keyType)).collect(Collectors.toSet());
         } catch (Exception e) {
-            throw new CustomException(redisCursorError, e);
+            e.printStackTrace();
+            return null;
         }
     }
 
@@ -191,7 +192,7 @@ public class RedisUtil {
             return "";
         HashOperations<String, Object, Object> hashOperations = getStringRedisTemplate().opsForHash();
         String hashKeyStr = JSONUtil.toString(hashKey);
-        return hashOperations.get(key, hashKeyStr) + "";
+        return (String) hashOperations.get(key, hashKeyStr);
     }
 
     //获取某个Key,并转换成特定的值
@@ -236,11 +237,12 @@ public class RedisUtil {
         HashOperations<String, Object, Object> hashOperations = getStringRedisTemplate().opsForHash();
         ScanOptions scanOptions = ScanOptions.scanOptions().match(pattern).count(limit).build();
         try (Cursor<Map.Entry<Object, Object>> cursor = hashOperations.scan(key, scanOptions);) {
-            Map<T, V> resultMap = cursor.stream().collect(Collectors.toMap(tempKey -> JSONUtil.toT(tempKey.getKey() + "", hashKeyClassType),
-                    tempKey -> JSONUtil.toT(tempKey.getValue() + "", valueClassType)));
+            Map<T, V> resultMap = cursor.stream().collect(Collectors.toMap(tempKey -> JSONUtil.toT((String) tempKey.getKey(), hashKeyClassType),
+                    tempKey -> JSONUtil.toT((String) tempKey.getValue(), valueClassType)));
             return resultMap;
         } catch (Exception e) {
-            throw new CustomException(redisCursorError, e);
+            e.printStackTrace();
+            return null;
         }
     }
 
@@ -263,7 +265,7 @@ public class RedisUtil {
         if (key == null || value.length == 0)
             return 0;
         AtomicLong atomicLong = new AtomicLong(0);
-        Arrays.stream(value).map(val -> JSONUtil.toString(val)).forEach(valstr -> atomicLong.addAndGet(stringStringZSetOperations.remove(valstr)));
+        Arrays.stream(value).map(val -> JSONUtil.toString(val)).forEach(valstr -> atomicLong.addAndGet(stringStringZSetOperations.remove(key, valstr)));
         return atomicLong.get();
     }
 
@@ -294,6 +296,13 @@ public class RedisUtil {
         if (key == null)
             return 0;
         return getStringRedisTemplate().opsForZSet().count(key, min, max);
+    }
+
+    //zset的count操作
+    public static long zcard(String key) {
+        if (key == null)
+            return 0;
+        return getStringRedisTemplate().opsForZSet().zCard(key);
     }
 
     /****************************************************  zset类型的操作结束  ******************************************************************/
