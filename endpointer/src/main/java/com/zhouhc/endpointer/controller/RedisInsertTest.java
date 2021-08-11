@@ -1,5 +1,8 @@
 package com.zhouhc.endpointer.controller;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.reflect.TypeToken;
 import com.zhouhc.endpointer.compent.RedisInsertTask;
 import com.zhouhc.endpointer.error.CustomException;
 import com.zhouhc.endpointer.redisSub.KeyExpiredLinster;
@@ -25,14 +28,13 @@ import org.springframework.web.bind.annotation.RestController;
 import java.nio.charset.Charset;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.zhouhc.endpointer.renum.ErrorEnum.redisCursorError;
 
@@ -85,8 +87,12 @@ public class RedisInsertTest {
 //                long epochMilli = now.toInstant(ZoneOffset.of("+8")).toEpochMilli();
                 long epochMilli = now.toEpochSecond(ZoneOffset.of("+8"));
                 System.out.printf("现在存入的时间为: %s%n", epochMilli);
-                stringStringZSetOperations.add("flow:stream" + i, "stream" + i + ":yyyyMMddHHmmss:" + i, (double) epochMilli);
-                stringStringZSetOperations.add("flow:stream" + i, "stream" + i + ":yyyyMMddHHmmss:0" + i, (double) epochMilli + 1);
+                stringStringZSetOperations.add("flow:stream1", "stream1:yyyyMMddHHmmss:" + i, (double) epochMilli);
+                for (int j = 0; j < 100; j++)
+                    RedisUtil.hSet("stream1:yyyyMMddHHmmss:" + i, "key" + j, "value" + j);
+                stringStringZSetOperations.add("flow:stream1", "stream1:yyyyMMddHHmmss:0" + i, (double) epochMilli + 1);
+                for (int j = 0; j < 100; j++)
+                    RedisUtil.hSet("stream1:yyyyMMddHHmmss:0" + i, "key" + j, "value" + j);
             }
         } catch (Exception e) {
             LOGGER.error("error", e);
@@ -99,7 +105,8 @@ public class RedisInsertTest {
     public String gsorce() {
         try {
             ZSetOperations<String, String> stringStringZSetOperations = SpringContextUtil.getBean(StringRedisTemplate.class).opsForZSet();
-            Set<String> times = stringStringZSetOperations.rangeByScore("times", 1533686888000L, 1625702888000L);
+            Set<String> times = stringStringZSetOperations.rangeByScore("flow:stream1", 0L, LocalDateTime.now().toEpochSecond(ZoneOffset.of("+8")));
+            Set<String> times_back = RedisUtil.zRangeByScore("flow:stream1", 0L, LocalDateTime.now().toEpochSecond(ZoneOffset.of("+8")));
             Map<String, String> hashkey = RedisUtil.hScan("hashkey", "*", 1, String.class, String.class);
             Set<Integer> scan = RedisUtil.scan("*", 100, Integer.class);
             System.out.println("");
@@ -143,6 +150,17 @@ public class RedisInsertTest {
         } catch (Exception e) {
             throw new CustomException(redisCursorError, e);
         }
+        return MsgUtils.successMsg();
+    }
+
+    @GetMapping("/toT")
+    public String toT() {
+        List<String> collect = Stream.<String>of("1 2 3 4 5 6").map(str -> str.split(" ")).filter(arrays -> arrays != null && arrays.length > 0).flatMap(arrays -> Arrays.stream(arrays)).collect(Collectors.toList());
+        collect.subList(0, 2);
+
+        List<?> test = new ArrayList();
+        test.add(null);
+
         return MsgUtils.successMsg();
     }
 

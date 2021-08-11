@@ -56,8 +56,8 @@ public class RedisUtil {
     }
 
     //设置某个key的ttl，单位毫秒
-    public static Boolean expireByMillisecond(String key, long timeout) {
-        return expire(key, timeout, TimeUnit.MILLISECONDS);
+    public static Boolean expire(String key, long timeout) {
+        return expire(key, timeout, TimeUnit.SECONDS);
     }
 
     //判断是否有某个key
@@ -81,7 +81,7 @@ public class RedisUtil {
         ScanOptions build = ScanOptions.scanOptions().match(pattern).count(limit).build();
         RedisConnection connection = getStringRedisTemplate().getConnectionFactory().getConnection();
         try (Cursor<byte[]> cursor = connection.scan(build)) {
-            return cursor.stream().map(byteArrays -> new String(byteArrays, Charset.forName("utf-8"))).map(str -> JSONUtil.toT(str, keyType)).collect(Collectors.toSet());
+            return cursor.stream().map(byteArrays -> new String(byteArrays, Charset.forName("utf-8"))).map(str -> JSONUtil.toT(str, keyType)).collect(Collectors.toCollection(LinkedHashSet::new));
         } catch (Exception e) {
             e.printStackTrace();
             return null;
@@ -196,7 +196,7 @@ public class RedisUtil {
     }
 
     //获取某个Key,并转换成特定的值
-    public static <T> T hget(String key, Object hashKey, Class<T> targetClass) {
+    public static <T> T hGet(String key, Object hashKey, Class<T> targetClass) {
         return JSONUtil.toT(hGet(key, hashKey), targetClass);
     }
 
@@ -277,9 +277,9 @@ public class RedisUtil {
         long zcount = zcount(key, min, max);
         long increamt = 0;
         ZSetOperations<String, String> stringStringZSetOperations = getStringRedisTemplate().opsForZSet();
-        Set<T> result = new HashSet<T>();
+        Set<T> result = new LinkedHashSet<T>();
         while (increamt < zcount) {
-            Set<T> collect = stringStringZSetOperations.rangeByScore(key, min, max, increamt, count).stream().map(valueStr -> JSONUtil.toT(valueStr, valueClassType)).collect(Collectors.toSet());
+            Set<T> collect = stringStringZSetOperations.rangeByScore(key, min, max, increamt, count).stream().map(valueStr -> JSONUtil.toT(valueStr, valueClassType)).collect(Collectors.toCollection(LinkedHashSet::new));
             result.addAll(collect);
             increamt += count;
         }
