@@ -3,8 +3,10 @@ package com.zhouhc.endpointer.utils;
 import com.zhouhc.endpointer.error.CustomException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.connection.StringRedisConnection;
 import org.springframework.data.redis.core.*;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.listener.Topic;
@@ -246,6 +248,21 @@ public class RedisUtil {
         }
     }
 
+    //一次性获取多个值
+    public static List<Object> multiHGet(final Set<String> keys) {
+        List<Object> result = getStringRedisTemplate().executePipelined(new RedisCallback<Long>() {
+            @Override
+            public Long doInRedis(RedisConnection connection) throws DataAccessException {
+                StringRedisConnection stringRedisConn = (StringRedisConnection) connection;
+                //结果逐一返回
+                for (String key : keys)
+                    stringRedisConn.append("", "");
+                return null;
+            }
+        });
+        return result;
+    }
+
     /****************************************************  hash类型的操作结束  ******************************************************************/
 
 
@@ -289,6 +306,11 @@ public class RedisUtil {
     //zset的按照socre进行游标遍历，简化版本
     public static Set<String> zRangeByScore(String key, double min, double max) {
         return zRangeByScore(key, min, max, 2000, String.class);
+    }
+
+    //zset的按照socre进行游标遍历，简化版本
+    public static Set<String> zRangeByScore(String key, double min, double max, long offset, long count) {
+        return getStringRedisTemplate().opsForZSet().rangeByScore(key, min, max, offset, count);
     }
 
     //zset的count操作

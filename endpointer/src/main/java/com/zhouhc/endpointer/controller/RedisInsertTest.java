@@ -82,17 +82,19 @@ public class RedisInsertTest {
         try {
             ZSetOperations<String, String> stringStringZSetOperations = SpringContextUtil.getBean(StringRedisTemplate.class).opsForZSet();
             LocalDateTime localDateTime = LocalDateTime.now();
-            for (int i = 0; i < 10; i++) {
-                LocalDateTime now = localDateTime.minusYears(i);
+            for (int i = 0; i < 300; i++) {
+                LocalDateTime now = localDateTime.minusWeeks(i);
 //                long epochMilli = now.toInstant(ZoneOffset.of("+8")).toEpochMilli();
                 long epochMilli = now.toEpochSecond(ZoneOffset.of("+8"));
                 System.out.printf("现在存入的时间为: %s%n", epochMilli);
-                stringStringZSetOperations.add("flow:stream1", "stream1:yyyyMMddHHmmss:" + i, (double) epochMilli);
-                for (int j = 0; j < 100; j++)
-                    RedisUtil.hSet("stream1:yyyyMMddHHmmss:" + i, "key" + j, "value" + j);
-                stringStringZSetOperations.add("flow:stream1", "stream1:yyyyMMddHHmmss:0" + i, (double) epochMilli + 1);
-                for (int j = 0; j < 100; j++)
-                    RedisUtil.hSet("stream1:yyyyMMddHHmmss:0" + i, "key" + j, "value" + j);
+                stringStringZSetOperations.add("flow:stream1", String.format("stream1:yyyyMMddHHmmss:%s",i), (double) epochMilli);
+                for (int j = 0; j < 20; j++) {
+                    RedisUtil.hSet(String.format("stream1:yyyyMMddHHmmss:%s",i), String.format("key-%s",j), String.format("value%s-%s",i,j));
+                }
+//                stringStringZSetOperations.add("flow:stream1", String.format("stream1:yyyyMMddHHmmss:0-%s",i), (double) epochMilli + 1);
+//                for (int j = 0; j < 20; j++) {
+//                    RedisUtil.hSet(String.format("stream1:yyyyMMddHHmmss:0-%s",i), String.format("key-%s",i,j), String.format("value0-%s-%s",i,j));
+//                }
             }
         } catch (Exception e) {
             LOGGER.error("error", e);
