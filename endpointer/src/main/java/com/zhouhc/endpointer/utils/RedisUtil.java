@@ -1,5 +1,6 @@
 package com.zhouhc.endpointer.utils;
 
+import com.google.gson.JsonObject;
 import com.zhouhc.endpointer.error.CustomException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -345,6 +346,13 @@ public class RedisUtil {
         synchronized (lockObj) {
             redisMessageListenerContainer.removeMessageListener(listener, topic);
         }
+    }
+
+    //Redis的push的发送消息
+    public static void publish(String channelName, Object message) {
+        if (channelName == null || message == null)
+            return;
+        getStringRedisTemplate().convertAndSend(channelName, JSONUtil.toString(message));
     }
 
     /****************************************************  pub/sub形式  ************************************************************************/

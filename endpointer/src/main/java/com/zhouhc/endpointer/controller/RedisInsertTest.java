@@ -32,6 +32,7 @@ import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -83,13 +84,13 @@ public class RedisInsertTest {
             ZSetOperations<String, String> stringStringZSetOperations = SpringContextUtil.getBean(StringRedisTemplate.class).opsForZSet();
             LocalDateTime localDateTime = LocalDateTime.now();
             for (int i = 0; i < 300; i++) {
-                LocalDateTime now = localDateTime.minusWeeks(i);
+                LocalDateTime now = localDateTime.minusDays(i);
 //                long epochMilli = now.toInstant(ZoneOffset.of("+8")).toEpochMilli();
                 long epochMilli = now.toEpochSecond(ZoneOffset.of("+8"));
                 System.out.printf("现在存入的时间为: %s%n", epochMilli);
-                stringStringZSetOperations.add("flow:stream1", String.format("stream1:yyyyMMddHHmmss:%s",i), (double) epochMilli);
+                stringStringZSetOperations.add("flow:stream1", String.format("stream1:yyyyMMddHHmmss:%s", i), (double) epochMilli);
                 for (int j = 0; j < 20; j++) {
-                    RedisUtil.hSet(String.format("stream1:yyyyMMddHHmmss:%s",i), String.format("key-%s",j), String.format("value%s-%s",i,j));
+                    RedisUtil.hSet(String.format("stream1:yyyyMMddHHmmss:%s", i), String.format("key-%s", j), String.format("value%s-%s", i, j));
                 }
 //                stringStringZSetOperations.add("flow:stream1", String.format("stream1:yyyyMMddHHmmss:0-%s",i), (double) epochMilli + 1);
 //                for (int j = 0; j < 20; j++) {
@@ -112,6 +113,24 @@ public class RedisInsertTest {
             Map<String, String> hashkey = RedisUtil.hScan("hashkey", "*", 1, String.class, String.class);
             Set<Integer> scan = RedisUtil.scan("*", 100, Integer.class);
             System.out.println("");
+        } catch (Exception e) {
+            LOGGER.error("error", e);
+        }
+        return MsgUtils.successMsg();
+    }
+
+    @GetMapping("/publish")
+    public String publish() {
+        try {
+            int count = 0;
+            while (count < 20000) {
+                String key = String.format("stream:YYYYDDMM:%s", count);
+                RedisUtil.hSet(key, String.format("key-%s", count), String.format("value-%s",count));
+                RedisUtil.publish("flow", key);
+                count++;
+                TimeUnit.SECONDS.sleep(1);
+            }
+
         } catch (Exception e) {
             LOGGER.error("error", e);
         }
