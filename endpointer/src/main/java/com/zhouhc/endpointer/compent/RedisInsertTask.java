@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.concurrent.Callable;
@@ -47,9 +48,16 @@ public class RedisInsertTask implements Callable<Void> {
             //循环
             String keyTime = getKeyTime();
             String key = String.format("%s:%s:%s", name, keyTime, count);
-            String fileName = String.format("%s-%s-%s", name, count, "field");
-            String value = String.format("%s-%s-%s", name, count, "value");
-            RedisUtil.hSet(key, fileName, value);
+            //测试数据
+            long threadid = Thread.currentThread().getId();
+            for (int i = 0; i < 20; i++) {
+                String fileName = String.format("%s-%s(%s)-%s(%s)", name, threadid, i, threadid, i);
+                String value = String.format("%s-%s(%s)-%s(%s)", name, threadid, i,threadid, i);
+                RedisUtil.hSet(key, fileName, value);
+            }
+            RedisUtil.expire(key, 3600 * 3);
+            long epochSecond = LocalDateTime.parse(keyTime, formate).toEpochSecond(ZoneOffset.of("+8"));
+            RedisUtil.zadd("flow:"+name,key,epochSecond);
             long levelCount = countDownLatch.getCount();
             if (levelCount % 500 == 0)
                 LOGGER.info(String.format("剩余数量:%s", levelCount));

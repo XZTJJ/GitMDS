@@ -101,8 +101,8 @@
         <root level="all">
             <appender-ref ref="Console" />
             <!--普通的日志不用输出到文件-->
-            <!--<appender-ref ref="RollingFileInfo" />-->
-            <!--<appender-ref ref="RollingFileError" />-->
+            <appender-ref ref="RollingFileInfo" />
+            <appender-ref ref="RollingFileError" />
         </root>
     </Loggers>
 </Configuration>
