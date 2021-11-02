@@ -128,9 +128,10 @@ public class RedisInsertTest {
                     RedisUtil.hSet(key, String.format("key-%s", j), String.format("value-%s", j));
                 RedisUtil.expire(key, 120);
                 RedisUtil.zadd("redis:stream", key, System.currentTimeMillis() / 1000);
+                RedisUtil.expire("redis:stream", 120);
                 RedisUtil.publish("flow", key);
                 count++;
-                TimeUnit.MILLISECONDS.sleep(800);
+                //TimeUnit.MILLISECONDS.sleep(80);
             }
 
         } catch (Exception e) {
