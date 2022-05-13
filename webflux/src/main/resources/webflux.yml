@@ -1,0 +1,7 @@
+server:
+  port: 9001
+spring:
+  r2dbc:
+    url: r2dbcs:mysql://192.168.30.232:3306/mydb?useSSL=false&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+    username: root
+    password: 123456

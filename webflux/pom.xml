@@ -2,23 +2,16 @@
 
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>GitMDS</artifactId>
+        <groupId>com.zhouhc</groupId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.zhouhc</groupId>
-    <artifactId>GitMDS</artifactId>
-    <version>1.0-SNAPSHOT</version>
-    <packaging>pom</packaging>
+    <artifactId>webflux</artifactId>
 
-    <modules>
-        <module>endpointer</module>
-        <module>sse-wesocket</module>
-        <module>java-shell</module>
-        <module>onlytest</module>
-        <module>no-web-module</module>
-        <module>NoWeb11</module>
-        <module>webflux</module>
-    </modules>
-    <name>GitMDS</name>
+    <name>webflux</name>
     <!-- FIXME change it to the project's website -->
     <url>http://www.example.com</url>
 
@@ -26,15 +19,61 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
+        <lombok.version>1.18.20</lombok.version>
+        <log4j2.version>2.17.1</log4j2.version>
     </properties>
 
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>2.5.13</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
+        <!-- 响应式编程新加的!!!!!!!!!!!!!!!-->
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.11</version>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-r2dbc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>dev.miku</groupId>
+            <artifactId>r2dbc-mysql</artifactId>
+            <version>0.8.2.RELEASE</version>
+        </dependency>
+        <!-- 认证的 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <!-- 响应式编程新加的!!!!!!!!!!!!!!!-->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
+            <optional>true</optional>
+        </dependency>
+
+
     </dependencies>
 
     <build>
