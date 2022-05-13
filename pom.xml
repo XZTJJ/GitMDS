@@ -13,9 +13,6 @@
         <module>endpointer</module>
         <module>sse-wesocket</module>
         <module>java-shell</module>
-        <module>onlytest</module>
-        <module>no-web-module</module>
-        <module>NoWeb11</module>
         <module>webflux</module>
     </modules>
     <name>GitMDS</name>
