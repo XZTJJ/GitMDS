@@ -1,28 +1,36 @@
 package com.zhouhc.handler;
 
-
-
 import com.zhouhc.po.PersonPo;
+import com.zhouhc.security.MyUserDetails;
 import com.zhouhc.service.PersonService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import reactor.core.publisher.Mono;
 
-import java.util.concurrent.TimeUnit;
-
 // person 的 ontroller
 @Component
 public class PersonHandler {
+    private final static Logger LOGGER = LoggerFactory.getLogger(PersonHandler.class);
 
     @Autowired
     private PersonService personService;
 
     //查找用户
     public Mono<ServerResponse> findAll(ServerRequest request) {
-        return ServerResponse.ok().body(personService.findAll(), PersonPo.class);
+        return ReactiveSecurityContextHolder.getContext().map(SecurityContext::getAuthentication).flatMap(authentication -> {
+            LOGGER.info("authentication类型:{},Principal类型:{},credentials类型:{},用户名:{}", authentication.getClass(),
+                    authentication.getPrincipal().getClass(),
+                    authentication.getCredentials().getClass(),
+                    ((MyUserDetails) authentication.getPrincipal()).getUsername());
+            return ServerResponse.ok().body(personService.findAll(), PersonPo.class);
+        });
+//        return ServerResponse.ok().body(personService.findAll(), PersonPo.class);
     }
 
     //查找某个指定的用户

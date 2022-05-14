@@ -8,5 +8,5 @@ spring:
     username: root
     password: 123456
 security:
-#  auth-server: http://192.168.10.11:3002
-  auth-server: http://192.168.100.104:9013
+  auth-server: http://192.168.80.70:9013
+  websocket-uri: '/ws/echo2'

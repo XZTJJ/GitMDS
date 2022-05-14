@@ -2,7 +2,7 @@
 <Configuration status="warn" monitorInterval="60">
 
     <Properties>
-        <Property name="rootLoggingLevel">info</Property>
+        <Property name="rootLoggingLevel">all</Property>
         <Property name="filename">${sys:Log4jOutputPath}/webflux.log</Property>
         <Property name="consolePattern">%d{ISO8601} %style{%marker}{red} [%-22c{2}] %t %-5p: %m%n</Property>
         <Property name="filePattern"   >%d{ISO8601} %style{%marker}{red} [%-22c{2}] %t %-5p: %m%n</Property>

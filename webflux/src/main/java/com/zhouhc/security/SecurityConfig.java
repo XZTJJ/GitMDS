@@ -1,6 +1,7 @@
 package com.zhouhc.security;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -9,6 +10,7 @@ import org.springframework.security.config.annotation.web.reactive.EnableWebFlux
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import reactor.core.publisher.Mono;
+
 /**
  *  配置对应的 webflux 的 spring security 设置
  *
@@ -23,6 +25,9 @@ public class SecurityConfig {
     @Autowired
     private MyAuthenticationManager authenticationManager;
 
+    @Value("${security.websocket-uri}")
+    private String websocketUri;
+
     @Autowired
     private MyServerSecurityContextRepository securityContextRepository;
 
@@ -33,10 +38,13 @@ public class SecurityConfig {
         return http
                 .exceptionHandling()
                 .authenticationEntryPoint(
-                         (swe, e) ->{
-                             return Mono.fromRunnable(() -> swe.getResponse().setStatusCode(HttpStatus.NETWORK_AUTHENTICATION_REQUIRED)); }
+                        (swe, e) -> {
+                            return Mono.fromRunnable(() -> swe.getResponse().setStatusCode(HttpStatus.NETWORK_AUTHENTICATION_REQUIRED));
+                        }
                 ).accessDeniedHandler(
-                        (swe, e) -> {return Mono.fromRunnable(() -> swe.getResponse().setStatusCode(HttpStatus.NOT_EXTENDED));}
+                        (swe, e) -> {
+                            return Mono.fromRunnable(() -> swe.getResponse().setStatusCode(HttpStatus.NOT_EXTENDED));
+                        }
                 ).and()
                 .csrf().disable()
                 .formLogin().disable()
@@ -47,6 +55,8 @@ public class SecurityConfig {
                 .securityContextRepository(securityContextRepository)
                 .authorizeExchange()
                 .pathMatchers(HttpMethod.OPTIONS).permitAll()
+                //websocket的地址必选放行，否者会被拦截
+                .pathMatchers(websocketUri).permitAll()
                 //这里可以设置无需 鉴权的 地址
                 //.pathMatchers(excludedAuthPages).permitAll()
                 .anyExchange().authenticated()

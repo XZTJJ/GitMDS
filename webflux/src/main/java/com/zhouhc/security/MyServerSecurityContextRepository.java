@@ -20,7 +20,7 @@ import java.time.Duration;
 /**
  *  这里进行token的解析，并且保存到 spring security context 中,
  *  其实一般这里就是查数据库，查看是否存在改用户，不过，应用需要
- *  请求 其他认证服务器 ，不需要查询数据库了
+ *  请求 其他认证服务器 ，不需要查询数据库了 。(可以自己造数据的，模拟认证服务就行了)
  */
 @Component
 public class MyServerSecurityContextRepository implements ServerSecurityContextRepository {
@@ -48,17 +48,17 @@ public class MyServerSecurityContextRepository implements ServerSecurityContextR
                     reactorRequest.responseTimeout(Duration.ofSeconds(15));
                 })
                 .exchangeToMono(response -> {
-                    if (response.statusCode().is2xxSuccessful())
+                    if (response.headers().header("Content-Type").stream().noneMatch(contentTyep -> StringUtils.containsIgnoreCase(contentTyep, "application/json")))
+                        return  Mono.error(new RuntimeException("the response Content-Type header is not json, the response header must be json, please check the login api interface"));
+                    else if (response.statusCode().is2xxSuccessful())
                         return response.bodyToMono(MyUserDetails.class);
                     else
-                        return response.createException().map(e -> Mono.error(e));
+                        return response.createException().flatMap(Mono::error);
                 }).flatMap(userDetails -> {
                     if (userDetails == null)
                         return Mono.empty();
-                    else if (Exception.class.isAssignableFrom(userDetails.getClass()))
-                        return Mono.error((Exception) userDetails);
                     else
-                        return Mono.defer(() -> Mono.just(new SecurityContextImpl(new UsernamePasswordAuthenticationToken(userDetails, userDetails, ((MyUserDetails) userDetails).getAuthorities()))));
+                        return Mono.just(new SecurityContextImpl(new UsernamePasswordAuthenticationToken(userDetails, userDetails, ((MyUserDetails) userDetails).getAuthorities())));
                 });
     }
 }
