@@ -19,13 +19,12 @@ public class MyWebSocketHandler implements WebSocketHandler {
 
     @Override
     public Mono<Void> handle(WebSocketSession session) {
-        /*
-        System.out.println("请求路径为: " + session.getHandshakeInfo().getUri().getPath());
+        String path = session.getHandshakeInfo().getUri().getPath();
+        System.out.println("请求路径为: " + path);
         //输入流
         Mono<Void> input = session.receive().map(WebSocketMessage::getPayloadAsText)
                 .flatMap(message -> {
-                    String[] strings = StringUtils.splitByWholeSeparatorPreserveAllTokens(message, ",");
-                    WebsocketOperate.putWebSocketSession(strings[0], session);
+                    WebsocketOperate.putWebSocketSession(StringUtils.substringAfterLast(path,"/"), session);
                     return Mono.empty();
                 }).then();
         //输出流
@@ -35,13 +34,13 @@ public class MyWebSocketHandler implements WebSocketHandler {
         //整合完成
         return Mono.zip(input, output).then(Mono.fromRunnable(() -> {
             WebsocketOperate.removeWebSocketSession(session);
-        }));*/
-        return session
-                .receive()
-                .map(WebSocketMessage::getPayloadAsText)
-                .map(tm -> "Echo: " + tm)
-                .map(session::textMessage)
-                .as(session::send);
+        }));
+//        return session
+//                .receive()
+//                .map(WebSocketMessage::getPayloadAsText)
+//                .map(tm -> "Echo: " + tm)
+//                .map(session::textMessage)
+//                .as(session::send);
 
     }
 

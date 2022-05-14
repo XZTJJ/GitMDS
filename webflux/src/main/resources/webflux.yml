@@ -9,4 +9,4 @@ spring:
     password: 123456
 security:
   auth-server: http://192.168.80.70:9013
-  websocket-uri: '/ws/echo2'
+  websocket-uri: '/ws/echo/*'
