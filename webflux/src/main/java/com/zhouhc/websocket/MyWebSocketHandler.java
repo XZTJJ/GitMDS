@@ -21,10 +21,28 @@ public class MyWebSocketHandler implements WebSocketHandler {
     public Mono<Void> handle(WebSocketSession session) {
         String path = session.getHandshakeInfo().getUri().getPath();
         System.out.println("请求路径为: " + path);
+        String appId = StringUtils.substringAfterLast(path, "/");
+
         //输入流
         Mono<Void> input = session.receive().map(WebSocketMessage::getPayloadAsText)
                 .flatMap(message -> {
-                    WebsocketOperate.putWebSocketSession(StringUtils.substringAfterLast(path,"/"), session);
+                    WebsocketOperate.putWebSocketMetrics(appId, message);
+                    return Mono.empty();
+                }).then();
+        //输出流
+        Mono<Void> output = session.send(Flux.create(
+                sink -> WebsocketOperate.putWebSocketSession(appId, new MyWebSocketContextHolder(session, sink))
+        ));
+        //整合完成
+        return Mono.zip(input, output).then(Mono.fromRunnable(() -> {
+            WebsocketOperate.removeWebSocketSession(appId);
+        }));
+
+        /* 原始实习方式
+        //输入流
+        Mono<Void> input = session.receive().map(WebSocketMessage::getPayloadAsText)
+                .flatMap(message -> {
+                    WebsocketOperate.putWebSocketSession(appId, session);
                     return Mono.empty();
                 }).then();
         //输出流
@@ -35,6 +53,9 @@ public class MyWebSocketHandler implements WebSocketHandler {
         return Mono.zip(input, output).then(Mono.fromRunnable(() -> {
             WebsocketOperate.removeWebSocketSession(session);
         }));
+         */
+
+        //测试用的实现方式
 //        return session
 //                .receive()
 //                .map(WebSocketMessage::getPayloadAsText)
