@@ -1,8 +1,19 @@
 # 介绍
 
-jdk8,  springboot2.x, 使用响应式(webflux)的方式 进行web开发，响应式WebClient客户端，响应式 关系型数据库的方式，响应式 spring security整合, 整合websocket, 从请求中获取 用户认证信息(PersonHandler的findAll()方法), 全局错误处理， 自定义返回消息格式(PersonHandler的findById()方法)
+## 环境
 
+- jdk8,  
+- springboot 2.5.13, 
+- 使用响应式(webflux)的方式 进行web开发，
+- 响应式WebClient客户端，
+- 响应式 关系型数据库的方式，
+- 响应式 spring security整合, 
+- 整合websocket, 
+- 从请求中获取 用户认证信息(PersonHandler的findAll()方法), 
+- 全局错误处理， 
+- 自定义返回消息格式(PersonHandler的findById()方法)
 
+ps:  如果需要认证服务，随便写个微服务就好了，返回具体的格式(一个POJO，MyUserDetails类型)。MyServerSecurityContextRepository里面的load()方法。
 
 ## MySQL数据库
 
