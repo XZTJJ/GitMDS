@@ -1,6 +1,6 @@
 # 介绍
 
-jdk8,  springboot2.x, 使用响应式(webflux)的方式 进行web开发，响应式WebClient客户端，响应式 关系型数据库的方式，响应式 spring security整合 。
+jdk8,  springboot2.x, 使用响应式(webflux)的方式 进行web开发，响应式WebClient客户端，响应式 关系型数据库的方式，响应式 spring security整合, 整合websocket, 从请求中获取 用户认证信息(PersonHandler的findAll()方法), 全局错误处理， 自定义返回消息格式(PersonHandler的findById()方法)
 
 
 
@@ -47,4 +47,38 @@ insert into person(name,age,sex,birthDay) values('name3',30, B'0','2022-01-10 09
 insert into person(name,age,sex,birthDay) values('name4',40, B'1','2022-01-10 09:25:07');
 insert into person(name,age,sex,birthDay) values('name5',50, B'0','2022-01-10 09:25:07');
 ```
+
+
+
+## 下面是一些参考的连接
+
+比较详细:
+
+https://segmentfault.com/a/1190000040222785
+
+https://blog.csdn.net/tonydz0523/article/details/108065025
+
+https://blog.csdn.net/get_set/article/details/79480233
+
+webflux整合security比较详细的 : 
+
+https://ld246.com/article/1599322291816/comment/1599371581106
+
+webflux整合websocket的(如果和security使用的话，必须配置ws的免拦截，注意base-uri配置)
+
+https://juejin.cn/post/6844903847287062542#heading-0
+
+自定义返回格式的，可以看看
+
+https://juejin.cn/post/7065479779041935367
+
+异常处理处理:
+
+https://blog.cnscud.com/springcloud/2021/08/09/springcloud-exceptionhandler.html
+
+一些异步的详细资料: 
+
+https://segmentfault.com/a/1190000021038373
+
+https://juejin.cn/post/6844903824566517773
 

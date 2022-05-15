@@ -6,12 +6,18 @@ import com.zhouhc.service.PersonService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import reactor.core.publisher.Mono;
+
+import java.util.HashMap;
+import java.util.Map;
+
 
 // person 的 ontroller
 @Component
@@ -33,10 +39,17 @@ public class PersonHandler {
 //        return ServerResponse.ok().body(personService.findAll(), PersonPo.class);
     }
 
-    //查找某个指定的用户
+    //查找某个指定的用户,算是某种实现的自定义返回数据了
     public Mono<ServerResponse> findById(ServerRequest request) {
+        Mono<ServerResponse> build = ServerResponse.notFound().build();
         long id = Long.valueOf(request.pathVariable("id"));
-        return ServerResponse.ok().body(personService.findById(id), PersonPo.class);
+//        return ServerResponse.ok().body(personService.findById(id), PersonPo.class);
+        return personService.findById(id).map(personPo -> {
+            Map<String,Object> temp = new HashMap<String,Object>();
+            temp.put("code","444444");
+            temp.put("data",personPo);
+            return temp;
+        }).flatMap(personMap -> ServerResponse.ok().contentType(MediaType.APPLICATION_JSON).body(BodyInserters.fromValue(personMap)).switchIfEmpty(build));
     }
 
     //查找某个指定的用户名
