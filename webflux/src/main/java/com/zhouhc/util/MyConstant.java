@@ -10,5 +10,6 @@ public class MyConstant {
     public final static String APPIDS = "use-AppIds";
     //保存metricNames的名称
     public final static String METRICNAMES = "use-metrinames";
+    public final static String SEC_WEBSOCKET_PROTOCOL = "Sec-WebSocket-Protocol";
 
 }

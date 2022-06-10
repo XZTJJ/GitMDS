@@ -55,8 +55,8 @@ public class SecurityConfig {
                 .securityContextRepository(securityContextRepository)
                 .authorizeExchange()
                 .pathMatchers(HttpMethod.OPTIONS).permitAll()
-                //websocket的地址必选放行，否者会被拦截
-                .pathMatchers(websocketUri).permitAll()
+                //websocket的必须为 admin 才让看
+                .pathMatchers(websocketUri).hasRole("ADMIN")
                 //这里可以设置无需 鉴权的 地址
                 //.pathMatchers(excludedAuthPages).permitAll()
                 .anyExchange().authenticated()

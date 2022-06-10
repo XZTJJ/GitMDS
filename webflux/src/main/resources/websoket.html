@@ -13,7 +13,7 @@
                console.log("您的浏览器支持 WebSocket!");
                
                // 打开一个 web socket
-               ws = new WebSocket("ws://192.168.36.27:9001/api/ws/echo/1");
+               ws = new WebSocket("ws://192.168.36.27:9001/api/ws/echo/1",[encodeURIComponent("gmpx1;29193-1654852283126")]);
                 
                ws.onopen = function()
                {

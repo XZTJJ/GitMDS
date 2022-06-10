@@ -2,11 +2,14 @@ package com.zhouhc.security;
 
 import lombok.Data;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 //保存 spring security 的用户信息的
 @Data
@@ -42,7 +45,9 @@ public class MyUserDetails implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.emptyList();
+        if(this.id != null && this.username != null && this.id == 1 && this.username.equals("admin"))
+            return Stream.of("ROLE_ADMIN").map(value -> new SimpleGrantedAuthority(value)).collect(Collectors.toList());
+        return Stream.of("ROLE_NOTADMIN").map(value -> new SimpleGrantedAuthority(value)).collect(Collectors.toList());
     }
 
     @Override

@@ -1,5 +1,6 @@
 package com.zhouhc.security;
 
+import cn.hutool.core.util.URLUtil;
 import com.zhouhc.util.MyConstant;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,6 +15,7 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClientRequest;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
 
@@ -40,6 +42,12 @@ public class MyServerSecurityContextRepository implements ServerSecurityContextR
         ServerHttpRequest request = exchange.getRequest();
         String acctoken = request.getHeaders().getFirst(MyConstant.ACCESS_TOKEN);
         String url = authServer + (StringUtils.endsWith(authServer, "/") ? "api/login/user" : "/api/login/user");
+        //兼容websocket的认证,websocketk可以自定义协议，并且将改协议放在header中，名字固定，这里直接将 url编码的token放入
+        String websocketToken = request.getHeaders().getFirst(MyConstant.SEC_WEBSOCKET_PROTOCOL);
+        if(StringUtils.isNotBlank(websocketToken)) {
+            acctoken = URLUtil.decode(websocketToken, StandardCharsets.UTF_8);
+            exchange.getResponse().getHeaders().add(MyConstant.SEC_WEBSOCKET_PROTOCOL,websocketToken);
+        }
         if (StringUtils.isBlank(acctoken) || StringUtils.isBlank(url))
             return Mono.empty();
         return webClient.get().uri(url).header(MyConstant.ACCESS_TOKEN, acctoken)
@@ -48,12 +56,10 @@ public class MyServerSecurityContextRepository implements ServerSecurityContextR
                     reactorRequest.responseTimeout(Duration.ofSeconds(15));
                 })
                 .exchangeToMono(response -> {
-                    if (response.headers().header("Content-Type").stream().noneMatch(contentTyep -> StringUtils.containsIgnoreCase(contentTyep, "application/json")))
-                        return  Mono.error(new RuntimeException("the response Content-Type header is not json, the response header must be json, please check the login api interface"));
-                    else if (response.statusCode().is2xxSuccessful())
+                    if (response.statusCode().is2xxSuccessful())
                         return response.bodyToMono(MyUserDetails.class);
                     else
-                        return response.createException().flatMap(Mono::error);
+                        return Mono.empty();
                 }).flatMap(userDetails -> {
                     if (userDetails == null)
                         return Mono.empty();
